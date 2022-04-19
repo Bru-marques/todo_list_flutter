@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/tasks.dart';
+import '../reposiories/todo_repository.dart';
 import '../widgets/todo_list_item.dart';
 
 class TodoListPage extends StatefulWidget {
@@ -12,10 +13,25 @@ class TodoListPage extends StatefulWidget {
 
 class _TodoListPageState extends State<TodoListPage> {
   final TextEditingController tasksController = TextEditingController();
+  final TodoRepository todoRepository = TodoRepository();
 
   List<TaskList> tasks = [];
+
   TaskList? deletedTask;
   int? deletedTaskPosition;
+
+  String? errorText;
+
+  @override
+  void initState() {
+    super.initState(); //
+
+    todoRepository.getTodoList().then((value) {
+      setState(() {
+        tasks = value;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +48,18 @@ class _TodoListPageState extends State<TodoListPage> {
                     Expanded(
                       child: TextField(
                         controller: tasksController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: "Add a task",
-                        ),
+                        decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Add a task",
+                            hintText: "Flutter class",
+                            errorText: errorText,
+                            focusedBorder: const OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(186, 104, 200, 1),
+                              ),
+                            ),
+                            labelStyle: const TextStyle(
+                                color: Color.fromRGBO(186, 104, 200, 1))),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -46,14 +70,24 @@ class _TodoListPageState extends State<TodoListPage> {
                       ),
                       onPressed: () {
                         String text = tasksController.text;
+
+                        if (text.isEmpty) {
+                          setState(() {
+                            errorText = "Please type a task";
+                          });
+                          return;
+                        }
+
                         setState(() {
                           TaskList newTaskList = TaskList(
                             title: text,
                             dateTime: DateTime.now(),
                           );
                           tasks.add(newTaskList);
+                          errorText = null;
                         });
                         tasksController.clear();
+                        todoRepository.saveTodoList(tasks);
                       },
                       child: Icon(Icons.add_rounded, size: 50),
                     ),
@@ -105,6 +139,7 @@ class _TodoListPageState extends State<TodoListPage> {
     setState(() {
       tasks.remove(task);
     });
+    todoRepository.saveTodoList(tasks);
 
     ScaffoldMessenger.of(context).clearSnackBars();
 
@@ -122,6 +157,7 @@ class _TodoListPageState extends State<TodoListPage> {
                   tasks.insert(deletedTaskPosition!, deletedTask!);
                 },
               );
+              todoRepository.saveTodoList(tasks);
             },
           ),
           duration: const Duration(seconds: 5)),
@@ -159,5 +195,6 @@ class _TodoListPageState extends State<TodoListPage> {
     setState(() {
       tasks.clear();
     });
+    todoRepository.saveTodoList(tasks);
   }
 }
